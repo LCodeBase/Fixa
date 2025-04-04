@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import { Platform } from 'react-native';
 import { auth, db } from '../config/firebase';
 import {
   createUserWithEmailAndPassword,
@@ -7,10 +8,12 @@ import {
   onAuthStateChanged,
   sendPasswordResetEmail,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  signInWithCredential
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Google from 'expo-auth-session/providers/google';
 
 // Cria o contexto de autenticação
 const AuthContext = createContext();
@@ -55,31 +58,82 @@ export function AuthProvider({ children }) {
 
   // Função para fazer login com Google
   async function loginWithGoogle() {
-    const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
+    // Verificar se estamos em ambiente web ou mobile
+    if (Platform.OS === 'web') {
+      const provider = new GoogleAuthProvider();
+      // Adiciona o ID do projeto como escopo
+      provider.addScope('https://www.googleapis.com/auth/firebase.project-646836569734');
 
-      // Verifica se o usuário já existe no Firestore
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
 
-      // Se não existir, cria um novo documento
-      if (!userDoc.exists()) {
-        await setDoc(doc(db, 'users', user.uid), {
-          name: user.displayName,
-          email: user.email,
-          createdAt: new Date().toISOString(),
-          preferences: {
-            darkMode: false,
-            notificationsEnabled: true,
-            notificationFrequency: 'daily'
-          }
-        });
+        // Verifica se o usuário já existe no Firestore
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+
+        // Se não existir, cria um novo documento
+        if (!userDoc.exists()) {
+          await setDoc(doc(db, 'users', user.uid), {
+            name: user.displayName,
+            email: user.email,
+            createdAt: new Date().toISOString(),
+            preferences: {
+              darkMode: false,
+              notificationsEnabled: true,
+              notificationFrequency: 'daily'
+            }
+          });
+        }
+
+        return user;
+      } catch (error) {
+        console.error("Erro no login com Google:", error);
+        throw error;
       }
+    } else {
+      // Para ambiente mobile (Expo)
+      try {
+        // Configuração para o projeto específico
+        const { type, accessToken, idToken } = await Google.logInAsync({
+          iosClientId: process.env.EXPO_PUBLIC_IOS_CLIENT_ID,
+          androidClientId: process.env.EXPO_PUBLIC_ANDROID_CLIENT_ID,
+          webClientId: process.env.EXPO_PUBLIC_WEB_CLIENT_ID,
+          scopes: ['profile', 'email', 'https://www.googleapis.com/auth/firebase.project-646836569734'],
+        });
 
-      return user;
-    } catch (error) {
-      throw error;
+        if (type === 'success') {
+          // Criar credencial do Google com o token
+          const credential = GoogleAuthProvider.credential(idToken, accessToken);
+
+          // Fazer login no Firebase com a credencial
+          const userCredential = await signInWithCredential(auth, credential);
+          const user = userCredential.user;
+
+          // Verifica se o usuário já existe no Firestore
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+
+          // Se não existir, cria um novo documento
+          if (!userDoc.exists()) {
+            await setDoc(doc(db, 'users', user.uid), {
+              name: user.displayName,
+              email: user.email,
+              createdAt: new Date().toISOString(),
+              preferences: {
+                darkMode: false,
+                notificationsEnabled: true,
+                notificationFrequency: 'daily'
+              }
+            });
+          }
+
+          return user;
+        } else {
+          return null;
+        }
+      } catch (error) {
+        console.error("Erro no login com Google:", error);
+        throw error;
+      }
     }
   }
 
