@@ -1,24 +1,20 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useDeck } from '../hooks/useDeck';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import DeckCard from '../components/DeckCard';
 
 // Icons
 import {
   PlusIcon,
-  PencilIcon,
-  TrashIcon,
   ArrowPathIcon,
-  ShareIcon,
   TagIcon,
-  DocumentDuplicateIcon,
-  ArrowRightIcon,
-  XMarkIcon
+  XMarkIcon,
+  ChartBarIcon,
+  StarIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 
 const Decks = () => {
-  const { decks, loading, error, createDeck, deleteDeck, shareDeck } = useDeck();
+  const { decks, loading, error, createDeck, deleteDeck, shareDeck, toggleFavorite, getStudyStats } = useDeck();
   const [isCreating, setIsCreating] = useState(false);
   const [newDeckName, setNewDeckName] = useState('');
   const [newDeckDescription, setNewDeckDescription] = useState('');
@@ -26,11 +22,46 @@ const Decks = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+
+  // Estatísticas
+  const [studyStats, setStudyStats] = useState({
+    totalStudied: 0,
+    studiedToday: 0,
+    streak: 0,
+    dueCards: 0
+  });
+
+  // Carregar estatísticas
+  useEffect(() => {
+    const stats = getStudyStats();
+
+    // Calcular cartões para revisão
+    let dueCards = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    decks.forEach(deck => {
+      deck.flashcards.forEach(card => {
+        const dueDate = new Date(card.repetitionData.dueDate);
+        dueDate.setHours(0, 0, 0, 0);
+        if (dueDate <= today) {
+          dueCards++;
+        }
+      });
+    });
+
+    setStudyStats({
+      ...stats,
+      dueCards
+    });
+  }, [decks, getStudyStats]);
 
   // Extrair todas as tags únicas de todos os decks
   const allTags = [...new Set(decks.flatMap(deck => deck.tags))];
 
-  // Filtrar decks com base na pesquisa e tags selecionadas
+  // Filtrar decks com base na pesquisa, tags selecionadas e favoritos
   const filteredDecks = decks.filter(deck => {
     const matchesSearch = searchTerm === '' ||
       deck.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -39,7 +70,9 @@ const Decks = () => {
     const matchesTags = selectedTags.length === 0 ||
       selectedTags.every(tag => deck.tags.includes(tag));
 
-    return matchesSearch && matchesTags;
+    const matchesFavorites = !showFavoritesOnly || deck.isFavorite;
+
+    return matchesSearch && matchesTags && matchesFavorites;
   });
 
   const handleCreateDeck = async (e: React.FormEvent) => {
@@ -79,6 +112,14 @@ const Decks = () => {
     }
   };
 
+  const handleToggleFavorite = async (deckId: string) => {
+    try {
+      await toggleFavorite(deckId);
+    } catch (error) {
+      console.error('Erro ao favoritar deck:', error);
+    }
+  };
+
   const toggleTag = (tag: string) => {
     setSelectedTags(prev =>
       prev.includes(tag)
@@ -108,14 +149,83 @@ const Decks = () => {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Meus Decks</h1>
-        <button
-          onClick={() => setIsCreating(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-        >
-          <PlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-          Novo Deck
-        </button>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setShowStats(!showStats)}
+            className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          >
+            <ChartBarIcon className="-ml-1 mr-2 h-5 w-5 text-primary-500" aria-hidden="true" />
+            Estatísticas
+          </button>
+          <button
+            onClick={() => setIsCreating(true)}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          >
+            <PlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+            Novo Deck
+          </button>
+        </div>
       </div>
+
+      {/* Estatísticas rápidas */}
+      {showStats && (
+        <div className="mb-6">
+          <div className="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden">
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">Estatísticas de Estudo</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 bg-primary-100 dark:bg-primary-900 rounded-md p-3">
+                      <ClockIcon className="h-6 w-6 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Para revisar hoje</p>
+                      <p className="text-2xl font-semibold text-gray-900 dark:text-white">{studyStats.dueCards}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 bg-green-100 dark:bg-green-900 rounded-md p-3">
+                      <ChartBarIcon className="h-6 w-6 text-green-600 dark:text-green-400" aria-hidden="true" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Estudados hoje</p>
+                      <p className="text-2xl font-semibold text-gray-900 dark:text-white">{studyStats.studiedToday}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900 rounded-md p-3">
+                      <ChartBarIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total estudados</p>
+                      <p className="text-2xl font-semibold text-gray-900 dark:text-white">{studyStats.totalStudied}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 bg-yellow-100 dark:bg-yellow-900 rounded-md p-3">
+                      <ChartBarIcon className="h-6 w-6 text-yellow-600 dark:text-yellow-400" aria-hidden="true" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Sequência atual</p>
+                      <p className="text-2xl font-semibold text-gray-900 dark:text-white">{studyStats.streak} dias</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Formulário de criação de deck */}
       {isCreating && (
@@ -209,29 +319,52 @@ const Decks = () => {
                 </div>
               </div>
             </div>
-            {allTags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {allTags.map(tag => (
-                  <button
-                    key={tag}
-                    onClick={() => toggleTag(tag)}
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${selectedTags.includes(tag) ? 'bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'}`}
-                  >
-                    <TagIcon className="-ml-0.5 mr-1.5 h-3 w-3" />
-                    {tag}
-                  </button>
-                ))}
-                {selectedTags.length > 0 && (
-                  <button
-                    onClick={() => setSelectedTags([])}
-                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                  >
-                    <XMarkIcon className="-ml-0.5 mr-1.5 h-3 w-3" />
-                    Limpar filtros
-                  </button>
-                )}
-              </div>
-            )}
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${showFavoritesOnly ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'}`}
+              >
+                <StarIcon className="-ml-0.5 mr-1.5 h-3 w-3" />
+                {showFavoritesOnly ? 'Todos os decks' : 'Apenas favoritos'}
+              </button>
+
+              {allTags.length > 0 && (
+                <>
+                  {allTags.map(tag => (
+                    <button
+                      key={tag}
+                      onClick={() => toggleTag(tag)}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${selectedTags.includes(tag) ? 'bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'}`}
+                    >
+                      <TagIcon className="-ml-0.5 mr-1.5 h-3 w-3" />
+                      {tag}
+                    </button>
+                  ))}
+                  {selectedTags.length > 0 && (
+                    <button
+                      onClick={() => setSelectedTags([])}
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                    >
+                      <XMarkIcon className="-ml-0.5 mr-1.5 h-3 w-3" />
+                      Limpar filtros
+                    </button>
+                  )}
+                </>
+              )}
+
+              {(showFavoritesOnly || selectedTags.length > 0) && (
+                <button
+                  onClick={() => {
+                    setShowFavoritesOnly(false);
+                    setSelectedTags([]);
+                  }}
+                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                >
+                  <XMarkIcon className="-ml-0.5 mr-1.5 h-3 w-3" />
+                  Limpar todos os filtros
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -257,94 +390,32 @@ const Decks = () => {
           </button>
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
-          <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-            {filteredDecks.map((deck) => (
-              <li key={deck.id} className="relative">
-                {deleteConfirmId === deck.id ? (
-                  <div className="px-4 py-4 sm:px-6 bg-red-50 dark:bg-red-900">
-                    <div className="text-sm text-red-600 dark:text-red-200 mb-2">Tem certeza que deseja excluir este deck? Esta ação não pode ser desfeita.</div>
-                    <div className="flex space-x-3">
-                      <button
-                        onClick={() => handleDeleteDeck(deck.id)}
-                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                      >
-                        Sim, excluir
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirmId(null)}
-                        className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="px-4 py-4 sm:px-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-sm font-medium text-primary-600 dark:text-primary-400">
-                          <Link to={`/decks/${deck.id}`} className="hover:underline focus:outline-none">
-                            {deck.name}
-                          </Link>
-                        </h3>
-                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{deck.description}</p>
-                      </div>
-                      <div className="ml-2 flex-shrink-0 flex">
-                        <Link
-                          to={`/study/${deck.id}`}
-                          className="mr-2 inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                        >
-                          Estudar
-                        </Link>
-                      </div>
-                    </div>
-                    <div className="mt-2 sm:flex sm:justify-between">
-                      <div className="sm:flex">
-                        <p className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                          {deck.flashcards.length} flashcards
-                        </p>
-                        {deck.tags.length > 0 && (
-                          <p className="mt-2 flex items-center text-sm text-gray-500 dark:text-gray-400 sm:mt-0 sm:ml-6">
-                            <TagIcon className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" aria-hidden="true" />
-                            <span>{deck.tags.join(', ')}</span>
-                          </p>
-                        )}
-                      </div>
-                      <div className="mt-2 flex items-center text-sm text-gray-500 dark:text-gray-400 sm:mt-0">
-                        <p>
-                          Atualizado em {format(new Date(deck.updatedAt), 'dd/MM/yyyy', { locale: ptBR })}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-2 flex space-x-2">
-                      <Link
-                        to={`/decks/${deck.id}`}
-                        className="inline-flex items-center px-2 py-1 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                      >
-                        <PencilIcon className="mr-1 h-3 w-3" aria-hidden="true" />
-                        Editar
-                      </Link>
-                      <button
-                        onClick={() => setDeleteConfirmId(deck.id)}
-                        className="inline-flex items-center px-2 py-1 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                      >
-                        <TrashIcon className="mr-1 h-3 w-3" aria-hidden="true" />
-                        Excluir
-                      </button>
-                      <button
-                        onClick={() => handleShareDeck(deck.id, deck.isPublic)}
-                        className="inline-flex items-center px-2 py-1 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                      >
-                        <ShareIcon className="mr-1 h-3 w-3" aria-hidden="true" />
-                        {deck.isPublic ? 'Tornar privado' : 'Compartilhar'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredDecks.map(deck => (
+            <DeckCard
+              key={deck.id}
+              deck={deck}
+              onDelete={(deckId) => deleteDeck(deckId)}
+              onShare={(deckId, isPublic) => shareDeck(deckId, isPublic)}
+              onToggleFavorite={(deckId) => handleToggleFavorite(deckId)}
+              className="h-full transition-all duration-300 hover:translate-y-[-4px]"
+            />
+          ))}
+          {filteredDecks.length === 0 && (
+            <div className="col-span-full bg-white dark:bg-gray-800 shadow rounded-lg p-6 text-center">
+              <p className="text-gray-500 dark:text-gray-400 mb-4">Nenhum deck encontrado com os filtros atuais.</p>
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedTags([]);
+                }}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              >
+                <ArrowPathIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+                Limpar filtros
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

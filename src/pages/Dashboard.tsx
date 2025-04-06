@@ -15,17 +15,41 @@ import {
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { decks, loading, error } = useDeck();
+  const { decks, loading, error, getStudyStats } = useDeck();
   const [dueFlashcards, setDueFlashcards] = useState<number>(0);
   const [totalFlashcards, setTotalFlashcards] = useState<number>(0);
   const [studiedToday, setStudiedToday] = useState<number>(0);
+  const [retentionRate, setRetentionRate] = useState<number>(0);
 
   useEffect(() => {
     if (decks.length > 0) {
-      // Calcular flashcards para revisão
+      // Obter estatísticas reais
+      const stats = getStudyStats();
+      setStudiedToday(stats.studiedToday);
+      
+      // Calcular taxa de retenção
+      let totalReviews = 0;
+      let successfulReviews = 0;
+      
+      decks.forEach(deck => {
+        deck.flashcards.forEach(card => {
+          if (card.repetitionData.repetitions > 0) {
+            totalReviews++;
+            // Considerar cartões com fator de facilidade > 2.0 como bem retidos
+            if (card.repetitionData.easeFactor > 2.0) {
+              successfulReviews++;
+            }
+          }
+        });
+      });
+      
+      // Calcular taxa de retenção real (evitar divisão por zero)
+      const calculatedRetentionRate = totalReviews > 0 ? Math.round((successfulReviews / totalReviews) * 100) : 0;
+      setRetentionRate(calculatedRetentionRate);
+      
+      // Calcular flashcards para revisão e total
       let due = 0;
       let total = 0;
-      let studied = 0;
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -40,21 +64,13 @@ const Dashboard = () => {
           if (dueDate <= today) {
             due++;
           }
-
-          // Verificar se foi estudado hoje
-          const lastReview = new Date(card.repetitionData.lastReview);
-          lastReview.setHours(0, 0, 0, 0);
-          if (lastReview.getTime() === today.getTime()) {
-            studied++;
-          }
         });
       });
 
       setDueFlashcards(due);
       setTotalFlashcards(total);
-      setStudiedToday(studied);
     }
-  }, [decks]);
+  }, [decks, getStudyStats]);
 
   if (loading) {
     return (
@@ -161,6 +177,77 @@ const Dashboard = () => {
               <Link to="/decks" className="font-medium text-primary-600 dark:text-primary-400 hover:text-primary-500">
                 Gerenciar flashcards
               </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Gráfico de Progresso */}
+      <div className="mb-8">
+        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Seu Progresso</h2>
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Gráfico de Progresso Semanal */}
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Atividade Semanal</h3>
+              <div className="h-64 relative">
+                {loading ? (
+                  <div className="absolute inset-0 flex justify-center items-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+                  </div>
+                ) : (
+                  <div className="h-full flex items-end justify-between">
+                    {Array.from({ length: 7 }).map((_, index) => {
+                      // Cálculo simulado de atividade diária
+                      const height = Math.floor(Math.random() * 80) + 20;
+                      const day = new Date();
+                      day.setDate(day.getDate() - (6 - index));
+                      const dayName = format(day, 'EEE', { locale: ptBR });
+
+                      return (
+                        <div key={index} className="flex flex-col items-center w-full">
+                          <div
+                            className="w-full max-w-[30px] bg-primary-500 dark:bg-primary-600 rounded-t-md transition-all duration-500 ease-in-out hover:bg-primary-400 dark:hover:bg-primary-500"
+                            style={{ height: `${height}%` }}
+                          ></div>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 mt-2">{dayName}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Estatísticas de Desempenho */}
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Desempenho</h3>
+              <div className="space-y-4">
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Taxa de Retenção</span>
+                    <span className="text-sm font-bold text-primary-600 dark:text-primary-400">{retentionRate}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                    <div className="bg-primary-600 h-2 rounded-full" style={{ width: `${retentionRate}%` }}></div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Sequência de Estudos</span>
+                    <span className="text-sm font-bold text-primary-600 dark:text-primary-400">{getStudyStats().streak} dias</span>
+                  </div>
+                  <div className="flex space-x-1">
+                    {Array.from({ length: 7 }).map((_, index) => (
+                      <div
+                        key={index}
+                        className={`h-2 flex-1 rounded-full ${index < getStudyStats().streak ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-600'}`}
+                      ></div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

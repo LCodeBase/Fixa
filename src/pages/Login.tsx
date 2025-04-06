@@ -48,7 +48,7 @@ const Login: React.FC = () => {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <img
           className="mx-auto h-12 w-auto"
-          src="/images/logo.png"
+          src="images/logo.png"
           alt="Fixa"
         />
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">Entre na sua conta</h2>

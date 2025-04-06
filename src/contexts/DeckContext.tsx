@@ -37,6 +37,9 @@ export type Deck = {
   updatedAt: Date;
   isPublic: boolean;
   ownerId: string;
+  isFavorite: boolean;
+  lastStudied?: Date;
+  studyStreak: number;
 };
 
 // Tipo para o contexto de decks
@@ -56,6 +59,9 @@ type DeckContextType = {
   importDeck: (file: File) => Promise<void>;
   exportDeck: (deckId: string) => Promise<void>;
   shareDeck: (deckId: string, isPublic: boolean) => Promise<void>;
+  toggleFavorite: (deckId: string) => Promise<void>;
+  getFavoriteDecks: () => Deck[];
+  getStudyStats: () => { totalStudied: number, studiedToday: number, streak: number };
 };
 
 export const DeckContext = createContext<DeckContextType>({} as DeckContextType);
@@ -118,6 +124,8 @@ export const DeckProvider = ({ children }: DeckProviderProps) => {
       updatedAt: new Date(),
       isPublic: false,
       ownerId: user.uid,
+      isFavorite: false,
+      studyStreak: 0
     };
 
     setDecks(prevDecks => [...prevDecks, newDeck]);
@@ -232,18 +240,51 @@ export const DeckProvider = ({ children }: DeckProviderProps) => {
   ): Promise<void> => {
     // Garantir que a qualidade está no intervalo correto
     quality = Math.max(0, Math.min(5, quality));
+    const now = new Date();
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
 
     setDecks(prevDecks =>
       prevDecks.map(deck => {
         if (deck.id !== deckId) return deck;
 
+        // Verificar se é o primeiro estudo do dia para este deck
+        let isFirstStudyToday = true;
+        let updatedStreak = deck.studyStreak;
+
+        if (deck.lastStudied) {
+          const lastStudiedDate = new Date(deck.lastStudied);
+          lastStudiedDate.setHours(0, 0, 0, 0);
+
+          // Se já estudou hoje, não é o primeiro estudo
+          if (lastStudiedDate.getTime() === today.getTime()) {
+            isFirstStudyToday = false;
+          } else {
+            // Verificar se o último estudo foi ontem para manter o streak
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            if (lastStudiedDate.getTime() === yesterday.getTime()) {
+              // Estudou ontem, incrementa o streak
+              updatedStreak += 1;
+            } else if (lastStudiedDate.getTime() < yesterday.getTime()) {
+              // Não estudou ontem, reseta o streak
+              updatedStreak = 1;
+            }
+          }
+        } else {
+          // Primeiro estudo de todos, começa o streak
+          updatedStreak = 1;
+        }
+
         return {
           ...deck,
+          lastStudied: now,
+          studyStreak: updatedStreak,
           flashcards: deck.flashcards.map(card => {
             if (card.id !== flashcardId) return card;
 
             const { repetitionData } = card;
-            const now = new Date();
             let newRepetitionData: RepetitionData;
 
             // Algoritmo SM-2
@@ -383,6 +424,71 @@ export const DeckProvider = ({ children }: DeckProviderProps) => {
     await updateDeck(deckId, { isPublic });
   };
 
+  // Alternar favorito
+  const toggleFavorite = async (deckId: string): Promise<void> => {
+    const deck = getDeck(deckId);
+    if (deck) {
+      await updateDeck(deckId, { isFavorite: !deck.isFavorite });
+    }
+  };
+
+  // Obter decks favoritos
+  const getFavoriteDecks = (): Deck[] => {
+    return decks.filter(deck => deck.isFavorite);
+  };
+
+  // Obter estatísticas de estudo
+  // Modificar a função getStudyStats para calcular estatísticas reais
+  const getStudyStats = () => {
+    let totalStudied = 0;
+    let studiedToday = 0;
+    let maxStreak = 0;
+    let retentionRate = 0;
+  
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Para calcular taxa de retenção
+    let totalReviews = 0;
+    let successfulReviews = 0;
+  
+    decks.forEach(deck => {
+      // Atualizar o streak máximo
+      if (deck.studyStreak > maxStreak) {
+        maxStreak = deck.studyStreak;
+      }
+  
+      deck.flashcards.forEach(card => {
+        if (card.repetitionData.repetitions > 0) {
+          totalStudied++;
+          totalReviews++;
+          
+          // Considerar cartões com fator de facilidade > 2.0 como bem retidos
+          if (card.repetitionData.easeFactor > 2.0) {
+            successfulReviews++;
+          }
+  
+          // Verificar se foi estudado hoje
+          const lastReview = new Date(card.repetitionData.lastReview);
+          lastReview.setHours(0, 0, 0, 0);
+          if (lastReview.getTime() === today.getTime()) {
+            studiedToday++;
+          }
+        }
+      });
+    });
+  
+    // Calcular taxa de retenção real (evitar divisão por zero)
+    retentionRate = totalReviews > 0 ? Math.round((successfulReviews / totalReviews) * 100) : 0;
+  
+    return { 
+      totalStudied, 
+      studiedToday, 
+      streak: maxStreak,
+      retentionRate
+    };
+  };
+
   return (
     <DeckContext.Provider
       value={{
@@ -401,6 +507,9 @@ export const DeckProvider = ({ children }: DeckProviderProps) => {
         importDeck,
         exportDeck,
         shareDeck,
+        toggleFavorite,
+        getFavoriteDecks,
+        getStudyStats,
       }}
     >
       {children}

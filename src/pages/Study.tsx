@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useDeck } from '../hooks/useDeck';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import FlipCard from '../components/FlipCard';
 
 // Icons
 import {
@@ -289,70 +290,23 @@ const Study = () => {
         </div>
       </div>
 
-      {/* Cartão */}
-      <div className="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden mb-6">
-        <div className="px-4 py-5 sm:p-6">
-          {/* Frente do cartão */}
-          <div className="mb-6">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Frente</h3>
-            <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <p className="text-lg text-gray-900 dark:text-white whitespace-pre-wrap">{currentCard.front}</p>
-
-              {currentCard.frontImage && (
-                <div className="mt-4">
-                  <img
-                    src={currentCard.frontImage}
-                    alt="Imagem da frente"
-                    className="max-w-full h-auto rounded-lg"
-                  />
-                </div>
-              )}
-
-              {currentCard.frontAudio && (
-                <button
-                  onClick={() => playAudio(currentCard.frontAudio)}
-                  className="mt-2 inline-flex items-center px-2 py-1 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                >
-                  <SpeakerWaveIcon className="mr-1 h-4 w-4" aria-hidden="true" />
-                  Ouvir
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Verso do cartão (mostrado após clicar em "Mostrar resposta") */}
-          {showAnswer && (
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Verso</h3>
-              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <p className="text-lg text-gray-900 dark:text-white whitespace-pre-wrap">{currentCard.back}</p>
-
-                {currentCard.backImage && (
-                  <div className="mt-4">
-                    <img
-                      src={currentCard.backImage}
-                      alt="Imagem do verso"
-                      className="max-w-full h-auto rounded-lg"
-                    />
-                  </div>
-                )}
-
-                {currentCard.backAudio && (
-                  <button
-                    onClick={() => playAudio(currentCard.backAudio)}
-                    className="mt-2 inline-flex items-center px-2 py-1 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                  >
-                    <SpeakerWaveIcon className="mr-1 h-4 w-4" aria-hidden="true" />
-                    Ouvir
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+      {/* Cartão com animação */}
+      <div className="mb-6">
+        <div className="h-[350px] w-full max-w-xl mx-auto">
+          <FlipCard
+            front={currentCard.front}
+            back={currentCard.back}
+            frontImage={currentCard.frontImage}
+            backImage={currentCard.backImage}
+            frontAudio={currentCard.frontAudio}
+            backAudio={currentCard.backAudio}
+            onFlip={(isFlipped) => setShowAnswer(isFlipped)}
+            className="card-shine h-full"
+          />
         </div>
 
         {/* Botões de ação */}
-        <div className="px-4 py-4 sm:px-6 bg-gray-50 dark:bg-gray-700">
+        <div className="mt-6 px-4 py-4 bg-white dark:bg-gray-800 shadow sm:rounded-lg">
           {!showAnswer ? (
             <div className="flex justify-center">
               <button
@@ -367,30 +321,36 @@ const Study = () => {
               <p className="text-sm text-center text-gray-500 dark:text-gray-400 mb-3">
                 Quão bem você lembrou deste flashcard?
               </p>
-              <div className="flex justify-center space-x-2">
+              <div className="flex flex-wrap justify-center gap-2">
                 <button
                   onClick={() => handleResponse(0)}
-                  className="px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  className="px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-transform hover:scale-105 active:scale-95"
                 >
-                  Não lembrei
+                  <span className="flex items-center">
+                    <FaceFrownIcon className="h-4 w-4 mr-1" />
+                    Não lembrei
+                  </span>
                 </button>
                 <button
                   onClick={() => handleResponse(3)}
-                  className="px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-500 hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+                  className="px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-500 hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-transform hover:scale-105 active:scale-95"
                 >
                   Difícil
                 </button>
                 <button
                   onClick={() => handleResponse(4)}
-                  className="px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform hover:scale-105 active:scale-95"
                 >
                   Bom
                 </button>
                 <button
                   onClick={() => handleResponse(5)}
-                  className="px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-500 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  className="px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-500 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-transform hover:scale-105 active:scale-95"
                 >
-                  Fácil
+                  <span className="flex items-center">
+                    <FaceSmileIcon className="h-4 w-4 mr-1" />
+                    Fácil
+                  </span>
                 </button>
               </div>
             </div>

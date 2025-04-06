@@ -4,6 +4,7 @@ import { useDeck } from '../hooks/useDeck';
 import { useTheme } from '../hooks/useTheme';
 import { format, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import StatsOverview from '../components/StatsOverview';
 
 // Chart.js
 import {
@@ -278,6 +279,9 @@ const Profile = () => {
         <div className="px-4 py-5 sm:p-6">
           {activeTab === 'stats' ? (
             <div>
+              {/* Estatísticas Avançadas */}
+              <StatsOverview decks={decks} className="mb-6" />
+
               {/* Cards de estatísticas */}
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-6">
                 <div className="bg-white dark:bg-gray-700 overflow-hidden shadow rounded-lg">
