@@ -93,7 +93,7 @@ const Home: React.FC = () => {
               <div className="mx-auto max-w-md px-4 sm:max-w-2xl sm:px-6 lg:max-w-none lg:px-0">
                 <img
                   className="w-full lg:absolute lg:inset-y-0 lg:left-0 lg:h-full lg:w-auto lg:max-w-none"
-                  src="images/901.png"
+                  src="/901.png"
                   alt="Ilustração de flashcards"
                 />
               </div>

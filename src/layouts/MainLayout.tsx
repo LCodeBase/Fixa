@@ -40,7 +40,7 @@ const MainLayout: React.FC = () => {
           <div className="flex justify-between items-center">
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2">
-              <img src="images/logo.png" alt="Fixa" className="h-8 w-8" />
+              <img src="/logo.png" alt="Fixa" className="h-8 w-8" />
               <span className="text-xl font-bold text-primary-600 dark:text-primary-400">Fixa</span>
             </Link>
 
