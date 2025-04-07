@@ -16,7 +16,7 @@ const AuthLayout: React.FC = () => {
           <div className="flex justify-between items-center">
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2">
-              <img src="images/logo.png" alt="Fixa" className="h-8 w-8" />
+              <img src="/logo.png" alt="Fixa" className="h-8 w-8 object-contain" />
               <span className="text-xl font-bold text-primary-600 dark:text-primary-400">Fixa</span>
             </Link>
 
@@ -49,7 +49,7 @@ const AuthLayout: React.FC = () => {
               &copy; {new Date().getFullYear()} Fixa. Todos os direitos reservados.
             </div>
             <div className="mt-2 md:mt-0 text-sm text-gray-500 dark:text-gray-400">
-              Feito com ❤️ para estudantes e autodidatas
+              Feito com ❤️ para estudantes!
             </div>
           </div>
         </div>

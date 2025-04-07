@@ -58,8 +58,8 @@ const Register: React.FC = () => {
     <div className="min-h-full flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <img
-          className="mx-auto h-12 w-auto"
-          src="/images/logo.png"
+          className="mx-auto h-12 w-auto min-w-[48px] object-contain"
+          src="/logo.png"
           alt="Fixa"
         />
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">Crie sua conta</h2>

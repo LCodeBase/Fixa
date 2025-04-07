@@ -40,11 +40,11 @@ const Home: React.FC = () => {
   return (
     <div className="relative overflow-hidden">
       {/* Hero section */}
-      <div className="pt-10 sm:pt-16 lg:pt-8 lg:pb-14 lg:overflow-hidden">
+      <div className="pt-6 sm:pt-10 lg:pt-4 lg:pb-14 lg:overflow-hidden">
         <div className="mx-auto max-w-7xl lg:px-8">
           <div className="lg:grid lg:grid-cols-2 lg:gap-8">
             <div className="mx-auto max-w-md px-4 sm:max-w-2xl sm:px-6 sm:text-center lg:px-0 lg:text-left lg:flex lg:items-center">
-              <div className="lg:py-24">
+              <div className="lg:py-16">
                 <h1 className="mt-4 text-4xl tracking-tight font-extrabold text-gray-900 dark:text-white sm:mt-5 sm:text-6xl lg:mt-6 xl:text-6xl">
                   <span className="block">A maneira inteligente</span>
                   <span className="block text-primary-600 dark:text-primary-400">de memorizar qualquer coisa</span>
@@ -89,10 +89,10 @@ const Home: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="mt-12 -mb-16 sm:-mb-48 lg:m-0 lg:relative">
+            <div className="mt-12 -mb-16 sm:-mb-48 lg:m-0 lg:relative flex items-center h-full">
               <div className="mx-auto max-w-md px-4 sm:max-w-2xl sm:px-6 lg:max-w-none lg:px-0">
                 <img
-                  className="w-full lg:absolute lg:inset-y-0 lg:left-0 lg:h-full lg:w-auto lg:max-w-none"
+                  className="w-full object-contain lg:h-[500px] lg:w-auto mx-auto"
                   src="/901.png"
                   alt="Ilustração de flashcards"
                 />

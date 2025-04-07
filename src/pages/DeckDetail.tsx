@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useDeck } from '../hooks/useDeck';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import FlashcardForm from '../components/FlashcardForm';
 
 // Icons
 import {
@@ -16,16 +17,30 @@ import {
   EyeIcon,
   EyeSlashIcon,
   PhotoIcon,
-  SpeakerWaveIcon
+  SpeakerWaveIcon,
+  DocumentIcon
 } from '@heroicons/react/24/outline';
 
+// Definição do tipo FlashcardFormData compatível com o componente FlashcardForm
 type FlashcardFormData = {
   front: string;
   back: string;
-  frontImage?: string;
-  backImage?: string;
+  frontImage?: File | string;
+  backImage?: File | string;
   frontAudio?: string;
   backAudio?: string;
+  frontDocument?: {
+    file?: File;
+    url?: string;
+    name: string;
+    type: string;
+  };
+  backDocument?: {
+    file?: File;
+    url?: string;
+    name: string;
+    type: string;
+  };
   tags: string;
 };
 
@@ -122,21 +137,39 @@ const DeckDetail = () => {
     }
   };
 
-  const handleAddFlashcard = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!deckId || !newCard.front.trim() || !newCard.back.trim()) return;
+  const handleAddFlashcard = async (formData: FlashcardFormData) => {
+    if (!deckId) return;
 
     try {
-      const tagsArray = newCard.tags
+      const tagsArray = formData.tags
         .split(',')
         .map(tag => tag.trim())
         .filter(tag => tag !== '');
 
-      await addFlashcard(deckId, newCard.front, newCard.back, {
-        frontImage: newCard.frontImage,
-        backImage: newCard.backImage,
-        frontAudio: newCard.frontAudio,
-        backAudio: newCard.backAudio,
+      // Garantir que os tipos de imagem sejam compatíveis
+      const frontImageValue = typeof formData.frontImage === 'string' ? formData.frontImage : undefined;
+      const backImageValue = typeof formData.backImage === 'string' ? formData.backImage : undefined;
+
+      // Garantir que os documentos tenham a estrutura correta
+      const frontDocumentValue = formData.frontDocument ? {
+        url: formData.frontDocument.url || '',
+        name: formData.frontDocument.name,
+        type: formData.frontDocument.type
+      } : undefined;
+
+      const backDocumentValue = formData.backDocument ? {
+        url: formData.backDocument.url || '',
+        name: formData.backDocument.name,
+        type: formData.backDocument.type
+      } : undefined;
+
+      await addFlashcard(deckId, formData.front, formData.back, {
+        frontImage: frontImageValue,
+        backImage: backImageValue,
+        frontAudio: formData.frontAudio,
+        backAudio: formData.backAudio,
+        frontDocument: frontDocumentValue,
+        backDocument: backDocumentValue,
         tags: tagsArray
       });
 
@@ -151,23 +184,41 @@ const DeckDetail = () => {
     }
   };
 
-  const handleUpdateFlashcard = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!deckId || !editingCardId || !newCard.front.trim() || !newCard.back.trim()) return;
+  const handleUpdateFlashcard = async (formData: FlashcardFormData) => {
+    if (!deckId || !editingCardId) return;
 
     try {
-      const tagsArray = newCard.tags
+      const tagsArray = formData.tags
         .split(',')
         .map(tag => tag.trim())
         .filter(tag => tag !== '');
 
+      // Garantir que os tipos de imagem sejam compatíveis
+      const frontImageValue = typeof formData.frontImage === 'string' ? formData.frontImage : undefined;
+      const backImageValue = typeof formData.backImage === 'string' ? formData.backImage : undefined;
+
+      // Garantir que os documentos tenham a estrutura correta
+      const frontDocumentValue = formData.frontDocument ? {
+        url: formData.frontDocument.url || '',
+        name: formData.frontDocument.name,
+        type: formData.frontDocument.type
+      } : undefined;
+
+      const backDocumentValue = formData.backDocument ? {
+        url: formData.backDocument.url || '',
+        name: formData.backDocument.name,
+        type: formData.backDocument.type
+      } : undefined;
+
       await updateFlashcard(deckId, editingCardId, {
-        front: newCard.front,
-        back: newCard.back,
-        frontImage: newCard.frontImage,
-        backImage: newCard.backImage,
-        frontAudio: newCard.frontAudio,
-        backAudio: newCard.backAudio,
+        front: formData.front,
+        back: formData.back,
+        frontImage: frontImageValue,
+        backImage: backImageValue,
+        frontAudio: formData.frontAudio,
+        backAudio: formData.backAudio,
+        frontDocument: frontDocumentValue,
+        backDocument: backDocumentValue,
         tags: tagsArray
       });
 
@@ -371,319 +422,196 @@ const DeckDetail = () => {
             <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
               {editingCardId ? 'Editar flashcard' : 'Adicionar novo flashcard'}
             </h3>
-            <form className="mt-5 space-y-4" onSubmit={editingCardId ? handleUpdateFlashcard : handleAddFlashcard}>
-              <div>
-                <label htmlFor="card-front" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Frente *
-                </label>
-                <textarea
-                  name="card-front"
-                  id="card-front"
-                  value={newCard.front}
-                  onChange={(e) => setNewCard({ ...newCard, front: e.target.value })}
-                  rows={2}
-                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:text-white"
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="front-image" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Imagem (frente) - URL
-                </label>
-                <div className="mt-1 flex rounded-md shadow-sm">
-                  <input
-                    type="text"
-                    name="front-image"
-                    id="front-image"
-                    value={newCard.frontImage || ''}
-                    onChange={(e) => setNewCard({ ...newCard, frontImage: e.target.value })}
-                    className="flex-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:text-white"
-                    placeholder="https://exemplo.com/imagem.jpg"
-                  />
-                  <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-300 sm:text-sm">
-                    <PhotoIcon className="h-5 w-5" aria-hidden="true" />
-                  </span>
-                </div>
-              </div>
-              <div>
-                <label htmlFor="front-audio" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Áudio (frente) - URL
-                </label>
-                <div className="mt-1 flex rounded-md shadow-sm">
-                  <input
-                    type="text"
-                    name="front-audio"
-                    id="front-audio"
-                    value={newCard.frontAudio || ''}
-                    onChange={(e) => setNewCard({ ...newCard, frontAudio: e.target.value })}
-                    className="flex-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:text-white"
-                    placeholder="https://exemplo.com/audio.mp3"
-                  />
-                  <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-300 sm:text-sm">
-                    <SpeakerWaveIcon className="h-5 w-5" aria-hidden="true" />
-                  </span>
-                </div>
-              </div>
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                <label htmlFor="card-back" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Verso *
-                </label>
-                <textarea
-                  name="card-back"
-                  id="card-back"
-                  value={newCard.back}
-                  onChange={(e) => setNewCard({ ...newCard, back: e.target.value })}
-                  rows={2}
-                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:text-white"
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="back-image" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Imagem (verso) - URL
-                </label>
-                <div className="mt-1 flex rounded-md shadow-sm">
-                  <input
-                    type="text"
-                    name="back-image"
-                    id="back-image"
-                    value={newCard.backImage || ''}
-                    onChange={(e) => setNewCard({ ...newCard, backImage: e.target.value })}
-                    className="flex-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:text-white"
-                    placeholder="https://exemplo.com/imagem.jpg"
-                  />
-                  <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-300 sm:text-sm">
-                    <PhotoIcon className="h-5 w-5" aria-hidden="true" />
-                  </span>
-                </div>
-              </div>
-              <div>
-                <label htmlFor="back-audio" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Áudio (verso) - URL
-                </label>
-                <div className="mt-1 flex rounded-md shadow-sm">
-                  <input
-                    type="text"
-                    name="back-audio"
-                    id="back-audio"
-                    value={newCard.backAudio || ''}
-                    onChange={(e) => setNewCard({ ...newCard, backAudio: e.target.value })}
-                    className="flex-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:text-white"
-                    placeholder="https://exemplo.com/audio.mp3"
-                  />
-                  <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-300 sm:text-sm">
-                    <SpeakerWaveIcon className="h-5 w-5" aria-hidden="true" />
-                  </span>
-                </div>
-              </div>
-              <div>
-                <label htmlFor="card-tags" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Tags (separadas por vírgula)
-                </label>
-                <input
-                  type="text"
-                  name="card-tags"
-                  id="card-tags"
-                  value={newCard.tags}
-                  onChange={(e) => setNewCard({ ...newCard, tags: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:text-white"
-                  placeholder="Ex: importante, difícil, revisão"
-                />
-              </div>
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsAddingCard(false);
-                    setEditingCardId(null);
-                    setNewCard({
-                      front: '',
-                      back: '',
-                      tags: ''
-                    });
-                  }}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                >
-                  {editingCardId ? 'Atualizar' : 'Adicionar'}
-                </button>
-              </div>
-            </form>
+            <div className="mt-5">
+              <FlashcardForm
+                deckId={deckId || ''}
+                initialData={newCard}
+                onSubmit={editingCardId ? handleUpdateFlashcard : handleAddFlashcard}
+                onCancel={() => {
+                  setIsAddingCard(false);
+                  setEditingCardId(null);
+                  setNewCard({
+                    front: '',
+                    back: '',
+                    tags: ''
+                  });
+                }}
+                isEditing={!!editingCardId}
+              />
+            </div>
+            {/* Input de arquivo removido pois o componente FlashcardForm já lida com o upload de imagens */}
           </div>
         </div>
       )}
 
       {/* Lista de flashcards */}
-      {deck.flashcards.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md p-6 text-center">
-          <p className="text-gray-500 dark:text-gray-400 mb-4">Este deck ainda não tem flashcards.</p>
-          <button
-            onClick={() => {
-              setIsAddingCard(true);
-              setEditingCardId(null);
-              setNewCard({
-                front: '',
-                back: '',
-                tags: ''
-              });
-            }}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary-600 bg-primary-100 dark:bg-primary-900 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-          >
-            <PlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-            Criar primeiro flashcard
-          </button>
-        </div>
-      ) : (
-        <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
-          <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-            {deck.flashcards.map((card) => (
-              <li key={card.id} className="relative">
-                {deleteConfirmId === card.id ? (
-                  <div className="px-4 py-4 sm:px-6 bg-red-50 dark:bg-red-900">
-                    <div className="text-sm text-red-600 dark:text-red-200 mb-2">Tem certeza que deseja excluir este flashcard? Esta ação não pode ser desfeita.</div>
-                    <div className="flex space-x-3">
-                      <button
-                        onClick={() => handleDeleteFlashcard(card.id)}
-                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                      >
-                        Sim, excluir
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirmId(null)}
-                        className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                      >
-                        Cancelar
-                      </button>
+      {
+        deck.flashcards.length === 0 ? (
+          <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md p-6 text-center">
+            <p className="text-gray-500 dark:text-gray-400 mb-4">Este deck ainda não tem flashcards.</p>
+            <button
+              onClick={() => {
+                setIsAddingCard(true);
+                setEditingCardId(null);
+                setNewCard({
+                  front: '',
+                  back: '',
+                  tags: ''
+                });
+              }}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary-600 bg-primary-100 dark:bg-primary-900 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              <PlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+              Criar primeiro flashcard
+            </button>
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
+            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+              {deck.flashcards.map((card) => (
+                <li key={card.id} className="relative">
+                  {deleteConfirmId === card.id ? (
+                    <div className="px-4 py-4 sm:px-6 bg-red-50 dark:bg-red-900">
+                      <div className="text-sm text-red-600 dark:text-red-200 mb-2">Tem certeza que deseja excluir este flashcard? Esta ação não pode ser desfeita.</div>
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={() => handleDeleteFlashcard(card.id)}
+                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        >
+                          Sim, excluir
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirmId(null)}
+                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="px-4 py-4 sm:px-6">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <h3 className="text-sm font-medium">
+                  ) : (
+                    <div className="px-4 py-4 sm:px-6">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <h3 className="text-sm font-medium">
+                                <button
+                                  onClick={() => toggleCardBack(card.id)}
+                                  className="focus:outline-none w-full text-left"
+                                >
+                                  <span className="absolute inset-0" aria-hidden="true" />
+                                  <span className="text-gray-900 dark:text-white">{card.front}</span>
+                                </button>
+                              </h3>
+                              {card.frontImage && (
+                                <div className="mt-2">
+                                  <img
+                                    src={card.frontImage}
+                                    alt="Imagem da frente"
+                                    className="max-h-40 rounded-md"
+                                  />
+                                </div>
+                              )}
+                              {card.frontAudio && (
+                                <div className="mt-2">
+                                  <button
+                                    onClick={() => new Audio(card.frontAudio).play()}
+                                    className="inline-flex items-center px-2 py-1 text-xs text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300"
+                                  >
+                                    <SpeakerWaveIcon className="h-4 w-4 mr-1" />
+                                    Ouvir áudio
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                            <div className="ml-4 flex-shrink-0 flex">
                               <button
                                 onClick={() => toggleCardBack(card.id)}
-                                className="focus:outline-none w-full text-left"
+                                className="mr-2 inline-flex items-center px-2 py-1 border border-transparent text-xs rounded-md text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                               >
-                                <span className="absolute inset-0" aria-hidden="true" />
-                                <span className="text-gray-900 dark:text-white">{card.front}</span>
+                                {showCardBacks[card.id] ? (
+                                  <>
+                                    <EyeSlashIcon className="h-4 w-4 mr-1" />
+                                    Esconder
+                                  </>
+                                ) : (
+                                  <>
+                                    <EyeIcon className="h-4 w-4 mr-1" />
+                                    Mostrar
+                                  </>
+                                )}
                               </button>
-                            </h3>
-                            {card.frontImage && (
-                              <div className="mt-2">
-                                <img
-                                  src={card.frontImage}
-                                  alt="Imagem da frente"
-                                  className="max-h-40 rounded-md"
-                                />
-                              </div>
-                            )}
-                            {card.frontAudio && (
-                              <div className="mt-2">
-                                <button
-                                  onClick={() => new Audio(card.frontAudio).play()}
-                                  className="inline-flex items-center px-2 py-1 text-xs text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300"
-                                >
-                                  <SpeakerWaveIcon className="h-4 w-4 mr-1" />
-                                  Ouvir áudio
-                                </button>
-                              </div>
-                            )}
+                            </div>
                           </div>
-                          <div className="ml-4 flex-shrink-0 flex">
-                            <button
-                              onClick={() => toggleCardBack(card.id)}
-                              className="mr-2 inline-flex items-center px-2 py-1 border border-transparent text-xs rounded-md text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                            >
-                              {showCardBacks[card.id] ? (
-                                <>
-                                  <EyeSlashIcon className="h-4 w-4 mr-1" />
-                                  Esconder
-                                </>
-                              ) : (
-                                <>
-                                  <EyeIcon className="h-4 w-4 mr-1" />
-                                  Mostrar
-                                </>
+
+                          {/* Mostrar o verso do cartão se showCardBacks[card.id] for true */}
+                          {showCardBacks[card.id] && (
+                            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                              <div className="text-sm text-gray-900 dark:text-white">
+                                <span className="font-medium text-gray-500 dark:text-gray-400 block mb-1">Verso:</span>
+                                {card.back}
+                              </div>
+                              {card.backImage && (
+                                <div className="mt-2">
+                                  <img
+                                    src={card.backImage}
+                                    alt="Imagem do verso"
+                                    className="max-h-40 rounded-md"
+                                  />
+                                </div>
                               )}
-                            </button>
-                          </div>
+                              {card.backAudio && (
+                                <div className="mt-2">
+                                  <button
+                                    onClick={() => new Audio(card.backAudio).play()}
+                                    className="inline-flex items-center px-2 py-1 text-xs text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300"
+                                  >
+                                    <SpeakerWaveIcon className="h-4 w-4 mr-1" />
+                                    Ouvir áudio
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Tags do flashcard */}
+                          {card.tags.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {card.tags.map(tag => (
+                                <span key={tag} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
-                        {/* Mostrar o verso do cartão se showCardBacks[card.id] for true */}
-                        {showCardBacks[card.id] && (
-                          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                            <div className="text-sm text-gray-900 dark:text-white">
-                              <span className="font-medium text-gray-500 dark:text-gray-400 block mb-1">Verso:</span>
-                              {card.back}
-                            </div>
-                            {card.backImage && (
-                              <div className="mt-2">
-                                <img
-                                  src={card.backImage}
-                                  alt="Imagem do verso"
-                                  className="max-h-40 rounded-md"
-                                />
-                              </div>
-                            )}
-                            {card.backAudio && (
-                              <div className="mt-2">
-                                <button
-                                  onClick={() => new Audio(card.backAudio).play()}
-                                  className="inline-flex items-center px-2 py-1 text-xs text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300"
-                                >
-                                  <SpeakerWaveIcon className="h-4 w-4 mr-1" />
-                                  Ouvir áudio
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Tags do flashcard */}
-                        {card.tags.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {card.tags.map(tag => (
-                              <span key={tag} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="ml-4 flex-shrink-0 flex">
-                        <button
-                          onClick={() => startEditingFlashcard(card.id)}
-                          className="mr-2 inline-flex items-center px-2 py-1 border border-gray-300 dark:border-gray-600 shadow-sm text-xs font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                        >
-                          <PencilIcon className="h-3 w-3 mr-1" aria-hidden="true" />
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirmId(card.id)}
-                          className="inline-flex items-center px-2 py-1 border border-gray-300 dark:border-gray-600 shadow-sm text-xs font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                        >
-                          <TrashIcon className="h-3 w-3 mr-1" aria-hidden="true" />
-                          Excluir
-                        </button>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => startEditingFlashcard(card.id)}
+                            className="inline-flex items-center px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                          >
+                            <PencilIcon className="h-4 w-4 mr-1" />
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirmId(card.id)}
+                            className="inline-flex items-center px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                          >
+                            <TrashIcon className="h-4 w-4 mr-1" />
+                            Excluir
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      }
+    </div >
   );
 };
 

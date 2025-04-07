@@ -20,6 +20,16 @@ export type Flashcard = {
   backImage?: string;
   frontAudio?: string;
   backAudio?: string;
+  frontDocument?: {
+    url: string;
+    name: string;
+    type: string;
+  };
+  backDocument?: {
+    url: string;
+    name: string;
+    type: string;
+  };
   tags: string[];
   repetitionData: RepetitionData;
   createdAt: Date;
@@ -195,6 +205,7 @@ export const DeckProvider = ({ children }: DeckProviderProps) => {
   };
 
   // Atualizar um flashcard
+  // Atualizar a função updateFlashcard para suportar os novos campos
   const updateFlashcard = async (
     deckId: string,
     flashcardId: string,

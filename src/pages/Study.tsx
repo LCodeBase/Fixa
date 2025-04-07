@@ -14,6 +14,7 @@ import {
   FaceSmileIcon,
   FaceFrownIcon,
   PhotoIcon,
+  DocumentIcon,
   SpeakerWaveIcon
 } from '@heroicons/react/24/outline';
 
@@ -55,7 +56,7 @@ const Study = () => {
     }
   }, [deckId, decks, getDeck, getDueFlashcards]);
 
-  // Reproduzir áudio se disponível
+  // Função para reproduzir áudio
   const playAudio = (audioUrl?: string) => {
     if (audioUrl) {
       const audio = new Audio(audioUrl);
@@ -126,6 +127,16 @@ const Study = () => {
         medium: 0,
         hard: 0
       });
+    }
+  };
+
+  // Adicione esta função para resetar o flashcard atual
+  const handleResetCard = () => {
+    setShowAnswer(false);
+    // Opcionalmente, você pode querer reproduzir o áudio da frente novamente
+    const currentCard = dueCards[currentCardIndex];
+    if (currentCard?.frontAudio) {
+      playAudio(currentCard.frontAudio);
     }
   };
 
@@ -301,6 +312,7 @@ const Study = () => {
             frontAudio={currentCard.frontAudio}
             backAudio={currentCard.backAudio}
             onFlip={(isFlipped) => setShowAnswer(isFlipped)}
+            onReset={handleResetCard}
             className="card-shine h-full"
           />
         </div>
