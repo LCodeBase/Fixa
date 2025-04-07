@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import SEOHelmet from '../components/SEOHelmet';
 
 // Icons
 import {
@@ -39,6 +40,12 @@ const Home: React.FC = () => {
 
   return (
     <div className="relative overflow-hidden">
+      <SEOHelmet 
+        title="Fixa - Memorização Inteligente com Flashcards" 
+        description="Fixa utiliza flashcards e repetição espaçada para otimizar seu aprendizado. Ideal para estudantes, profissionais e autodidatas que desejam memorizar informações de forma eficiente e duradoura."
+        canonicalUrl="https://yourwebsite.com/"
+      />
+      
       {/* Hero section */}
       <div className="pt-6 sm:pt-10 lg:pt-4 lg:pb-14 lg:overflow-hidden">
         <div className="mx-auto max-w-7xl lg:px-8">
